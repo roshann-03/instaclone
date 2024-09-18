@@ -5,7 +5,7 @@ const storySchema = mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "user"
   },
-  story: String,
+  story: Buffer,
   date: {
     type: Date,
     default: Date.now

@@ -2,14 +2,14 @@ var express = require("express");
 var router = express.Router();
 const passport = require("passport");
 const localStrategy = require("passport-local");
-const userModel = require("./users");
-const postModel = require("./posts");
-const storyModel = require("./story");
+const userModel = require("../models/users");
+const postModel = require("../models/posts");
+const storyModel = require("../models/story");
 passport.use(new localStrategy(userModel.authenticate()));
 const upload = require("./multer");
 const utils = require("../utils/utils");
-
-
+const fs = require("fs");
+const path = require("path");
 // GET
 router.get("/", function (req, res) {
   res.render("index", { footer: false });
@@ -36,17 +36,17 @@ router.get("/feed", isLoggedIn, async function (req, res) {
     .findOne({ username: req.session.passport.user })
     .populate("posts");
 
-  let stories = await storyModel.find({ user: { $ne: user._id } })
-  .populate("user");
+  let stories = await storyModel
+    .find({ user: { $ne: user._id } })
+    .populate("user");
 
   var uniq = {};
-  var filtered = stories.filter(item => {
-    if(!uniq[item.user.id]){
+  var filtered = stories.filter((item) => {
+    if (!uniq[item.user.id]) {
       uniq[item.user.id] = " ";
       return true;
-    }
-    else return false;
-  })
+    } else return false;
+  });
 
   let posts = await postModel.find().populate("user");
 
@@ -161,6 +161,7 @@ router.post(
   isLoggedIn,
   upload.single("image"),
   async function (req, res) {
+    // res.send(req.file);
     const user = await userModel.findOne({
       username: req.session.passport.user,
     });
@@ -169,12 +170,12 @@ router.post(
       const post = await postModel.create({
         user: user._id,
         caption: req.body.caption,
-        picture: req.file.filename,
+        picture: req.file.buffer,
       });
       user.posts.push(post._id);
     } else if (req.body.category === "story") {
       let story = await storyModel.create({
-        story: req.file.filename,
+        story: req.file.buffer,
         user: user._id,
       });
       user.stories.push(story._id);
@@ -195,7 +196,7 @@ router.post(
     const user = await userModel.findOne({
       username: req.session.passport.user,
     });
-    user.picture = req.file.filename;
+    user.picture = req.file.buffer;
     await user.save();
     res.redirect("/edit");
   }
